@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Show Tweet By Click</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <!--<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4kLyqA2-vjD1SzEuD0EAwbNoyKlI7v_c"></script>-->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      // In the following example, markers appear when the user clicks on the map.
+      // Each marker is labeled with a single alphabetical character.
+      var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      var labelIndex = 0;
+      var new_york = { lat: 40.97, lng: -74.59 };
+      var pointer = null;
+      var map = null;
+      var socket = null;
+      function initialize() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 8,
+          center: new_york
+        });
+        console.log('start socket');
+        socket = io.connect('/');
+        socket.on('clickTweets', function(data){
+            data.forEach(function(tweet){
+                console.log("lat:" + tweet.geo.lat + ",lng" + tweet.geo.lon);
+                addInfoWindow(map, tweet)
+            });
+        });
+
+        // This event listener calls addMarker() when the map is clicked.
+        google.maps.event.addListener(map, 'click', function(event) {
+          if(pointer!=null) pointer.setMap(null);
+          addMarker(event.latLng, map);
+          socket.emit('click', event.latLng);
+        });
+      }
+
+      // Adds a marker to the map.
+      function addMarker(location, map) {
+        // Add the marker at the clicked location, and add the next-available label
+        // from the array of alphabetical characters.
+        pointer = new google.maps.Marker({
+          position: location,
+          label: labels[labelIndex++ % labels.length],
+          map: map
+        });
+      }
+
+      function addInfoWindow(map, tweet){
+        var infoWindow = new google.maps.InfoWindow({
+            content: "<img src="+tweet.user.profile_image_url+" align=left><b>@"+tweet.user.screen_name+"</b><br>"+tweet.text,
+            position: {lat: tweet.geo.lat, lng: tweet.geo.lon},
+            map: map,
+        });
+        setTimeout(function(){infoWindow.close()}, '2000');
+      }
+
+      //google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4kLyqA2-vjD1SzEuD0EAwbNoyKlI7v_c&callback=initialize">
+    </script>
+  </head>
+  <body>
+    <div id="map"></div>
+  </body>
+</html>
